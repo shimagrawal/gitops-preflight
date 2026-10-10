@@ -1,7 +1,7 @@
 name: release
 
-# On a v* tag: test, publish binaries for every platform (GoReleaser, which also
-# updates the Homebrew tap), and push a multi-arch image to GHCR.
+# On a v* tag: test, publish binaries for every platform (GoReleaser), and push
+# a multi-arch image to GHCR.
 on:
   push:
     tags: ['v*']
@@ -36,7 +36,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
   image:
     needs: release

@@ -1,6 +1,6 @@
 # Builds release binaries for every platform on a v* tag (see
 # .github/workflows/release.yaml). Docker images are built separately from the
-# Dockerfile, so they also bundle flux-schema.
+# Dockerfile, so they also bundle flux-schema. Homebrew: not yet.
 version: 2
 
 project_name: gitops-preflight
@@ -31,23 +31,3 @@ changelog:
   sort: asc
   filters:
     exclude: ["^docs:", "^test:", "^ci:"]
-
-# Homebrew: needs a shimagrawal/homebrew-tap repository and a HOMEBREW_TAP_TOKEN
-# secret (a token that can push to it). Remove this block to release without it.
-brews:
-  - name: gitops-preflight
-    repository:
-      owner: shimagrawal
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
-    homepage: https://github.com/shimagrawal/gitops-preflight
-    description: Validate Kargo, Argo CD and Kubernetes manifests against pinned schemas
-    license: Apache-2.0
-    dependencies:
-      - name: flux-schema
-        type: optional
-    caveats: |
-      gitops-preflight needs flux-schema: https://github.com/fluxcd/flux-schema/releases
-    test: |
-      system "#{bin}/gitops-preflight", "--version"

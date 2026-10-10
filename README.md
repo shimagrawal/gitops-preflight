@@ -45,7 +45,7 @@ rules with the same engine as the Kubernetes API server.
 |---|---|
 | **Docker** (nothing else needed) | `docker run --rm -v "$PWD:/work" ghcr.io/shimagrawal/gitops-preflight validate` |
 | **GitHub Action** | see [CI](#ci) |
-| **Homebrew** | `brew install shimagrawal/tap/gitops-preflight` |
+| **Homebrew** | coming later |
 | **Binary** | download from [Releases](https://github.com/shimagrawal/gitops-preflight/releases) |
 | **Go** | `go install github.com/shimagrawal/gitops-preflight/cmd/gitops-preflight@latest` |
 
