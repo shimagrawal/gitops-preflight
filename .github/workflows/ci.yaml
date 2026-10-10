@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install flux-schema
+        env:
+          FLUX_SCHEMA_VERSION: 0.15.0
+        run: |
+          curl -fsSL "https://github.com/fluxcd/flux-schema/releases/download/v${FLUX_SCHEMA_VERSION}/flux-schema_${FLUX_SCHEMA_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin flux-schema
+
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: go vet
+        run: go vet ./...
+
+      # Unit tests plus integration tests that run the real example through
+      # flux-schema (schemas are downloaded on first use).
+      - name: go test
+        run: go test ./...
+
+      - name: Validate the example with the built binary
+        run: |
+          go build -o /tmp/gitops-preflight ./cmd/gitops-preflight
+          /tmp/gitops-preflight doctor
+          /tmp/gitops-preflight validate examples
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image and validate the example in it
+        run: |
+          docker build -t gitops-preflight:ci .
+          docker run --rm -v "$PWD/examples:/work" gitops-preflight:ci validate

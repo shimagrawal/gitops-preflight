@@ -1,0 +1,22 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: nginx
+  namespace: oci-flow
+spec:
+  interval: 5m0s
+  subscriptions:
+    # A new nginx tag produces new Freight.
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        constraint: ^1.27.0
+        discoveryLimit: 5
+
+    # So does a change to either app (Kustomize nginx or Helm hello). The
+    # Freight pins the commit, so all stages render from the same source.
+    - git:
+        repoURL: ${GITOPS_REPO_URL}
+        branch: main
+        includePaths:
+          - oci-flow/apps
+        discoveryLimit: 5

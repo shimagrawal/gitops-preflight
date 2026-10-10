@@ -1,0 +1,25 @@
+# Example project: Kargo renders nginx (Kustomize) and hello (Helm) for every
+# stage into one OCI artifact, and Argo CD deploys it by digest.
+name: oci-flow
+
+versions:
+  kargo: v1.12.2
+  argocd: v3.5.4
+  kubernetes: 1.36.1
+
+# Placeholders in kargo/ and argocd/, filled in from the environment or .env.
+substitute:
+  - GITOPS_REPO_URL
+  - OCI_REPO_PREFIX
+  - ARGOCD_DESTINATION
+
+stages: [dev, test, prod]
+
+# Mirrors the render steps of the oci-publish PromotionTask.
+render:
+  - app: nginx
+    kustomize: apps/nginx/overlays/{stage}
+  - app: hello
+    helm:
+      chart: apps/hello
+      values: apps/hello/values-{stage}.yaml

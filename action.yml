@@ -1,0 +1,78 @@
+name: gitops-preflight
+description: Validate Kargo, Argo CD and Kubernetes manifests against schemas pinned to your versions
+author: shimagrawal
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  command:
+    description: "What to run: validate, or one check (validate kargo | steps | argocd | manifests)"
+    default: validate
+  paths:
+    description: Project folders, or folders to search for projects (space separated)
+    default: "."
+  version:
+    description: gitops-preflight version to install (a release tag), or "latest"
+    default: latest
+  flux-schema-version:
+    description: flux-schema version to install
+    default: 0.15.0
+  env-file:
+    description: Optional dotenv file with placeholder values
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install gitops-preflight and flux-schema
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        FLUX_SCHEMA_VERSION: ${{ inputs.flux-schema-version }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS" in Linux) os=linux ;; macOS) os=darwin ;; *) echo "unsupported runner OS: $RUNNER_OS" >&2; exit 1 ;; esac
+        case "$RUNNER_ARCH" in X64) arch=amd64 ;; ARM64) arch=arm64 ;; *) echo "unsupported runner arch: $RUNNER_ARCH" >&2; exit 1 ;; esac
+        bin="$RUNNER_TEMP/gitops-preflight-bin"; mkdir -p "$bin"
+        if [ "$VERSION" = latest ]; then
+          VERSION="$(gh release view --repo shimagrawal/gitops-preflight --json tagName -q .tagName)"
+        fi
+        curl -fsSL "https://github.com/shimagrawal/gitops-preflight/releases/download/${VERSION}/gitops-preflight_${VERSION#v}_${os}_${arch}.tar.gz" \
+          | tar -xz -C "$bin" gitops-preflight
+        curl -fsSL "https://github.com/fluxcd/flux-schema/releases/download/v${FLUX_SCHEMA_VERSION}/flux-schema_${FLUX_SCHEMA_VERSION}_${os}_${arch}.tar.gz" \
+          | tar -xz -C "$bin" flux-schema
+        echo "$bin" >> "$GITHUB_PATH"
+        "$bin/gitops-preflight" --version
+
+    - name: Cache schemas
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/gitops-preflight
+        key: gitops-preflight-schemas-${{ hashFiles('**/gitops-preflight.yaml') }}
+        restore-keys: gitops-preflight-schemas-
+
+    - name: Run gitops-preflight
+      shell: bash
+      env:
+        COMMAND: ${{ inputs.command }}
+        PATHS: ${{ inputs.paths }}
+        ENV_FILE: ${{ inputs.env-file }}
+      run: |
+        set -o pipefail
+        args=()
+        [ -n "$ENV_FILE" ] && args+=(--env-file "$ENV_FILE")
+        # shellcheck disable=SC2086 # COMMAND and PATHS are word lists
+        gitops-preflight $COMMAND "${args[@]}" $PATHS | tee "$RUNNER_TEMP/gitops-preflight.txt"
+
+    - name: Summary
+      if: always()
+      shell: bash
+      run: |
+        {
+          echo '### gitops-preflight'
+          echo '```'
+          cat "$RUNNER_TEMP/gitops-preflight.txt" 2>/dev/null || echo "did not run"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
