@@ -11,6 +11,20 @@ the versions you actually run, before anything is promoted.
 > gitops-preflight builds on it and catches what flux-schema can't, in one
 > command, locally or in CI.
 
+On top of schema validation, it adds:
+
+- **Step configs:** what's inside each step's `config:` is checked against
+  Kargo's step schemas. Kargo's CRD accepts any config, so CRD-based
+  validation can't see a typo there.
+- **Pinned versions:** it downloads and caches the Kargo, Argo CD and
+  Kubernetes schemas for the exact versions in `gitops-preflight.yaml`. With
+  flux-schema alone you fetch and extract them yourself, per version.
+- **Rendering:** it renders Helm (built in) and Kustomize per stage, so the
+  rendered manifests are validated, not just the sources.
+- **Akuity-only kinds and steps** (`ee.kargo.akuity.io`, `send-message`,
+  custom steps): no public schemas exist, so you can bring your own CRDs and
+  step schemas or skip them explicitly (see [Akuity Platform](#akuity-platform)).
+
 ```console
 $ gitops-preflight validate ./oci-flow
 Kargo v1.12.2
