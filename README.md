@@ -4,6 +4,13 @@ Pre-flight checks for GitOps delivery: validate your **Kargo**, **Argo CD** and
 rendered **Kubernetes** manifests locally or in CI, against schemas pinned to
 the versions you actually run, before anything is promoted.
 
+> **The problem:** mistakes in Kargo and Argo CD YAML often only show up during
+> a promotion, sometimes in prod.
+> [flux-schema](https://github.com/fluxcd/flux-schema) is a great validator,
+> but it only checks what CRD schemas describe.
+> gitops-preflight builds on it and catches what flux-schema can't, in one
+> command, locally or in CI.
+
 ```console
 $ gitops-preflight validate ./oci-flow
 Kargo v1.12.2
